@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover" />
+<title>DEAD ZONE: ZOMBIE SURVIVAL</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+  html,body{width:100%;height:100%;overflow:hidden;background:#050505;font-family:'Segoe UI',Arial,sans-serif;color:#e0e0e0}
+  #game{position:fixed;inset:0}
+  canvas{display:block}
+  .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#1a0a0a 0%,#000 100%);z-index:50;padding:20px;text-align:center;overflow-y:auto}
+  .hidden{display:none!important}
+  h1{font-size:clamp(24px,6vw,54px);letter-spacing:6px;color:#c1272d;text-shadow:0 0 24px #c1272d,0 0 6px #000;font-weight:900}
+  .tag{color:#7a7a7a;letter-spacing:8px;margin-top:6px;font-size:clamp(10px,2vw,14px)}
+  .btn{background:linear-gradient(#2a2a2a,#111);border:1px solid #c1272d;color:#eee;padding:14px 34px;margin:8px;font-size:16px;letter-spacing:3px;cursor:pointer;border-radius:4px;transition:.15s;min-width:220px;font-family:inherit}
+  .btn:hover{background:#c1272d;color:#fff;box-shadow:0 0 18px #c1272d}
+  .btn:active{transform:scale(.97)}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .btn.small{padding:8px 16px;font-size:13px;min-width:0;margin:4px}
+  .row{display:flex;flex-wrap:wrap;justify-content:center}
+
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:10;font-weight:600}
+  #topbar{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .panel{background:rgba(0,0,0,.55);border:1px solid rgba(193,39,45,.5);border-radius:6px;padding:8px 12px;font-size:13px;backdrop-filter:blur(4px)}
+  #healthWrap,#staminaWrap{width:200px;height:12px;background:#1a1a1a;border:1px solid #333;border-radius:6px;overflow:hidden;margin-bottom:4px}
+  #healthBar{height:100%;width:100%;background:linear-gradient(90deg,#c1272d,#ff4d4d);transition:width .15s}
+  #staminaBar{height:100%;width:100%;background:linear-gradient(90deg,#2d7fc1,#4dbbff);transition:width .1s}
+  #stats{min-width:220px}
+  #objective{position:absolute;top:10px;left:50%;transform:translateX(-50%);max-width:60vw;text-align:center}
+  #objective .label{color:#c1272d;font-size:11px;letter-spacing:3px}
+  #objText{font-size:15px;margin-top:2px}
+  #kills{position:absolute;top:110px;left:10px;font-size:12px;color:#aaa}
+  #ammoPanel{position:absolute;bottom:20px;right:20px;text-align:right}
+  #ammoPanel .wep{font-size:12px;color:#c1272d;letter-spacing:2px}
+  #ammoBig{font-size:28px;line-height:1}
+  #ammoBig span{font-size:14px;color:#888}
+  #medcount{position:absolute;bottom:100px;right:20px;font-size:12px;color:#4dbb7a}
+
+  /* minimap */
+  #minimapWrap{position:absolute;bottom:20px;left:20px;width:120px;height:120px;border:1px solid rgba(193,39,45,.5);border-radius:8px;background:rgba(0,0,0,.6);overflow:hidden}
+  #minimap{width:100%;height:100%}
+
+  /* boss bar */
+  #bossBar{position:absolute;bottom:180px;left:50%;transform:translateX(-50%);width:60%;max-width:500px;display:none}
+  #bossBar.show{display:block}
+  #bossName{text-align:center;color:#c1272d;font-size:14px;letter-spacing:4px;margin-bottom:4px;text-shadow:0 0 8px #c1272d}
+  #bossWrap{height:14px;background:#1a1a1a;border:1px solid #c1272d;border-radius:7px;overflow:hidden}
+  #bossFill{height:100%;background:linear-gradient(90deg,#c1272d,#ff6b6b);transition:width .2s}
+
+  /* touch */
+  #touchControls{position:fixed;inset:0;z-index:20;pointer-events:none;display:none}
+  #touchControls.active{display:block}
+  #joyBase{position:absolute;bottom:70px;left:50px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.05);border:2px solid rgba(255,255,255,.2);pointer-events:auto;touch-action:none}
+  #joyKnob{position:absolute;top:50%;left:50%;width:60px;height:60px;margin:-30px 0 0 -30px;border-radius:50%;background:rgba(193,39,45,.6);border:2px solid #c1272d;pointer-events:none}
+  .tbtn{position:absolute;width:70px;height:70px;border-radius:50%;background:rgba(0,0,0,.55);border:2px solid rgba(193,39,45,.7);color:#eee;font-size:11px;display:flex;align-items:center;justify-content:center;pointer-events:auto;font-weight:700;letter-spacing:1px;touch-action:none;font-family:inherit}
+  .tbtn:active,.tbtn.on{background:#c1272d}
+  #btnFire{bottom:130px;right:40px;width:90px;height:90px;font-size:13px}
+  #btnAim{bottom:230px;right:60px}
+  #btnReload{bottom:230px;right:150px}
+  #btnJump{bottom:40px;right:150px}
+  #btnCrouch{bottom:40px;right:40px}
+  #btnSwap{bottom:130px;right:150px}
+  #btnMed{bottom:130px;left:200px}
+  #btnPause{position:absolute;top:10px;right:10px;width:44px;height:44px;border-radius:8px;background:rgba(0,0,0,.6);border:1px solid #c1272d;color:#eee;font-size:18px;pointer-events:auto;cursor:pointer;font-family:inherit}
+  #lookZone{position:absolute;top:0;right:0;width:55%;height:100%;pointer-events:auto;touch-action:none}
+
+  #centerMsg{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);text-align:center;font-size:22px;letter-spacing:4px;color:#c1272d;text-shadow:0 0 12px #000;opacity:0;transition:opacity .3s;pointer-events:none}
+  #centerMsg.show{opacity:1}
+  #hitMarker{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;border:2px solid #fff;border-radius:50%;opacity:0;pointer-events:none}
+  #hitMarker.head{background:rgba(255,80,80,.4);border-color:#ff4444}
+  #crosshair{position:absolute;top:50%;left:50%;width:6px;height:6px;margin:-3px 0 0 -3px;background:#c1272d;border-radius:50%;opacity:.7;pointer-events:none}
+  #damageVignette{position:fixed;inset:0;pointer-events:none;box-shadow:inset 0 0 120px rgba(193,39,45,.7);opacity:0;transition:opacity .3s;z-index:9}
+
+  #cinematic{position:fixed;inset:0;background:#000;z-index:60;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:30px;opacity:0;pointer-events:none;transition:opacity .5s}
+  #cinematic.show{opacity:1;pointer-events:auto}
+  #cinematic h2{color:#c1272d;font-size:clamp(20px,5vw,40px);letter-spacing:6px;margin-bottom:14px}
+  #cinematic p{color:#aaa;max-width:600px;line-height:1.7;font-size:15px}
+
+  #muteBtn{position:absolute;top:10px;right:60px;width:44px;height:44px;border-radius:8px;background:rgba(0,0,0,.6);border:1px solid #c1272d;color:#eee;font-size:18px;pointer-events:auto;cursor:pointer;font-family:inherit}
+  #flashlightInd{position:absolute;top:60px;right:10px;font-size:11px;color:#888;letter-spacing:2px;opacity:0;transition:opacity .2s}
+  #flashlightInd.on{opacity:1;color:#ffdd66}
+
+  input[type=range]{accent-color:#c1272d}
+  select{font-family:inherit}
+</style>
+</head>
+<body>
+<div id="game"></div>
+
+<!-- MENU -->
+<div id="menu" class="screen">
+  <h1>DEAD ZONE</h1>
+  <div class="tag">ZOMBIE SURVIVAL</div>
+  <p style="margin:18px 0;color:#888;max-width:420px;font-size:13px;line-height:1.6">Survive the outbreak. Hunt the infected. Reach the source.<br>YEAR 2032. Humanity's last stand begins here.</p>
+  <button class="btn" id="btnPlay">▶ NEW GAME</button>
+  <button class="btn" id="btnContinue">CONTINUE</button>
+  <div class="row">
+    <button class="btn small" id="btnMissions">MISSIONS</button>
+    <button class="btn small" id="btnSettings">SETTINGS</button>
+    <button class="btn small" id="btnAbout">ABOUT</button>
+  </div>
+  <p style="position:absolute;bottom:14px;font-size:11px;color:#444;text-align:center;padding:0 20px">Desktop: WASD move · Mouse look · LMB fire · R reload · 1-8 weapons · F flashlight · Space jump · C crouch · H heal</p>
+</div>
+
+<!-- MISSIONS -->
+<div id="missions" class="screen hidden">
+  <h1 style="font-size:32px">MISSIONS</h1>
+  <div id="missionList" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;max-width:900px;width:100%;margin-top:20px"></div>
+  <button class="btn" style="margin-top:24px" id="btnBackMissions">◀ BACK</button>
+</div>
+
+<!-- SETTINGS -->
+<div id="settings" class="screen hidden">
+  <h1 style="font-size:32px">SETTINGS</h1>
+  <div style="max-width:400px;width:100%;text-align:left;margin-top:20px;color:#ccc;font-size:14px">
+    <label style="display:block;margin:14px 0 4px">Mouse / Touch Sensitivity: <span id="sensVal">5</span></label>
+    <input type="range" id="sens" min="1" max="10" value="5" style="width:100%"/>
+    <label style="display:block;margin:14px 0 4px">Master Volume: <span id="volVal">7</span></label>
+    <input type="range" id="vol" min="0" max="10" value="7" style="width:100%"/>
+    <label style="display:block;margin:14px 0 4px">Graphics Quality</label>
+    <select id="quality" style="width:100%;padding:8px;background:#1a1a1a;color:#eee;border:1px solid #333;border-radius:4px">
+      <option value="low">Low (fast)</option>
+      <option value="med" selected>Medium</option>
+      <option value="high">High (beautiful)</option>
+    </select>
+    <label style="display:block;margin:14px 0 4px">
+      <input type="checkbox" id="vibrate" /> Vibration (mobile)
+    </label>
+  </div>
+  <button class="btn" style="margin-top:24px" id="btnBackSettings">◀ BACK</button>
+</div>
+
+<!-- ABOUT -->
+<div id="about" class="screen hidden">
+  <h1 style="font-size:32px">ABOUT</h1>
+  <p style="max-width:540px;margin-top:20px;color:#aaa;line-height:1.7;font-size:14px">
+    <b style="color:#c1272d">DEAD ZONE: ZOMBIE SURVIVAL</b><br><br>
+    A browser-based 3D zombie survival game. Built with Three.js. All geometry procedural — no external assets required.<br><br>
+    Contains 10 missions, 5 enemy types, 8 weapons, boss battle, and full offline save.<br><br>
+    © 2032 · SURVIVE THE OUTBREAK
+  </p>
+  <button class="btn" style="margin-top:24px" id="btnBackAbout">◀ BACK</button>
+</div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="topbar">
+    <div class="panel" id="stats">
+      <div style="font-size:10px;color:#888;letter-spacing:2px">HEALTH</div>
+      <div id="healthWrap"><div id="healthBar"></div></div>
+      <div style="font-size:10px;color:#888;letter-spacing:2px;margin-top:6px">STAMINA</div>
+      <div id="staminaWrap"><div id="staminaBar"></div></div>
+    </div>
+    <div id="objective" class="panel">
+      <div class="label">OBJECTIVE</div>
+      <div id="objText">—</div>
+    </div>
+  </div>
+  <div id="kills">KILLS: 0</div>
+  <div id="ammoPanel" class="panel">
+    <div class="wep" id="wepName">PISTOL</div>
+    <div id="ammoBig">12<span>/12</span></div>
+  </div>
+  <div id="medcount">MEDKITS: 2</div>
+  <div id="minimapWrap"><canvas id="minimap" width="120" height="120"></canvas></div>
+
+  <div id="bossBar">
+    <div id="bossName">ALPHA ZOMBIE</div>
+    <div id="bossWrap"><div id="bossFill"></div></div>
+  </div>
+
+  <div id="crosshair"></div>
+  <div id="hitMarker"></div>
+  <div id="centerMsg"></div>
+  <button id="btnPause">❚❚</button>
+  <button id="muteBtn">🔊</button>
+  <div id="flashlightInd">FLASHLIGHT</div>
+</div>
+
+<div id="damageVignette"></div>
+
+<!-- Touch controls -->
+<div id="touchControls">
+  <div id="lookZone"></div>
+  <div id="joyBase"><div id="joyKnob"></div></div>
+  <button class="tbtn" id="btnFire">FIRE</button>
+  <button class="tbtn" id="btnAim">AIM</button>
+  <button class="tbtn" id="btnReload">RELOAD</button>
+  <button class="tbtn" id="btnJump">JUMP</button>
+  <button class="tbtn" id="btnCrouch">CROUCH</button>
+  <button class="tbtn" id="btnSwap">SWAP</button>
+  <button class="tbtn" id="btnMed">+MED</button>
+</div>
+
+<!-- Pause -->
+<div id="pause" class="screen hidden" style="background:rgba(0,0,0,.85)">
+  <h1 style="font-size:36px">PAUSED</h1>
+  <button class="btn" id="btnResume">RESUME</button>
+  <button class="btn" id="btnRestart">RESTART MISSION</button>
+  <button class="btn" id="btnSettings2">SETTINGS</button>
+  <button class="btn" id="btnQuit">MAIN MENU</button>
+</div>
+
+<!-- Mission Complete -->
+<div id="complete" class="screen hidden">
+  <h1 style="color:#4dbb7a">MISSION COMPLETE</h1>
+  <div id="completeStats" style="margin-top:20px;color:#ccc;font-size:15px;line-height:1.9;min-width:280px"></div>
+  <button class="btn" style="margin-top:24px" id="btnNext">CONTINUE ▶</button>
+</div>
+
+<!-- Game Over -->
+<div id="gameover" class="screen hidden">
+  <h1>YOU DIED</h1>
+  <p style="margin-top:16px;color:#888">The outbreak claims another survivor.</p>
+  <button class="btn" style="margin-top:24px" id="btnRetry">RETRY</button>
+  <button class="btn" id="btnGiveUp">MAIN MENU</button>
+</div>
+
+<!-- Cinematic intro -->
+<div id="cinematic">
+  <h2 id="cineTitle">MISSION 01</h2>
+  <p id="cineText"></p>
+  <button class="btn" style="margin-top:24px" id="btnCineSkip">SKIP ▶</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =====================================================================
+   DEAD ZONE: ZOMBIE SURVIVAL — v2.0
+   ===================================================================== */
+const DZ = {};
+
+/* -------- Save -------- */
+DZ.SAVE_KEY = 'deadzone_save_v2';
+DZ.save = {
+  unlocked:[0], completed:[], kills:0, totalKills:0,
+  settings:{ sens:5, vol:7, quality:'med', vibrate:true, muted:false }
+};
+DZ.loadSave = ()=>{
+  try{
+    const r = localStorage.getItem(DZ.SAVE_KEY);
+    if(r){
+      const d = JSON.parse(r);
+      DZ.save = Object.assign(DZ.save, d);
+      if(!DZ.save.settings) DZ.save.settings = { sens:5, vol:7, quality:'med', vibrate:true, muted:false };
+    }
+  }catch(e){ console.warn('save load failed', e); }
+};
+DZ.persist = ()=>{ try{ localStorage.setItem(DZ.SAVE_KEY, JSON.stringify(DZ.save)); }catch(e){} };
+
+/* -------- Config -------- */
+DZ.MISSIONS = [
+  { id:0, name:'01 · OUTBREAK',       desc:'Eliminate the infected and escape.',    target:5,  area:'city',     cine:'You wake up in a ruined apartment. The outbreak has begun. Grab a weapon and fight your way out.' },
+  { id:1, name:'02 · ESCAPE',         desc:'Fight through the streets.',            target:8,  area:'city',     cine:'The streets are crawling. Find a safe route through the city.' },
+  { id:2, name:'03 · SUPPLY RUN',     desc:'Secure the supply zone.',               target:10, area:'city',     cine:'Food. Medicine. Ammo. Everything is gone. Search the buildings.' },
+  { id:3, name:'04 · LOST SURVIVOR',  desc:'Clear the way for the survivor.',       target:12, area:'city',     cine:'A survivor is trapped. The infected have surrounded the area.' },
+  { id:4, name:'05 · HOSPITAL',       desc:'Survive the infected corridors.',       target:14, area:'hospital', cine:'The hospital holds vital medical supplies. But it is not empty.' },
+  { id:5, name:'06 · THE HORDE',      desc:'Repel the incoming horde.',             target:18, area:'city',     cine:'They are coming. Dozens of them. Hold the line.' },
+  { id:6, name:'07 · MILITARY',       desc:'Reach the military compound.',          target:20, area:'military', cine:'The military base holds answers. And very dangerous infected.' },
+  { id:7, name:'08 · TRANSMISSION',   desc:'Defend the radio tower.',               target:22, area:'military', cine:'A signal. Someone is out there. Protect the transmission.' },
+  { id:8, name:'09 · UNDERGROUND',    desc:'Survive the laboratory.',               target:25, area:'lab',      cine:'The lab. The origin of the virus. What will you find?' },
+  { id:9, name:'10 · FINAL INFECTION',desc:'Defeat the Alpha. End it.',             target:30, area:'lab',      cine:'The Alpha. The source. This ends now.', boss:true }
+];
+
+DZ.WEAPONS = [
+  { name:'PISTOL',       dmg:18, rate:250,  mag:12, reload:1200, spread:0.012, auto:false },
+  { name:'REVOLVER',     dmg:38, rate:500,  mag:6,  reload:1800, spread:0.008, auto:false },
+  { name:'SHOTGUN',      dmg:14, rate:700,  mag:6,  reload:2200, spread:0.06,  pellets:6, auto:false },
+  { name:'ASSAULT RIFLE',dmg:22, rate:110,  mag:30, reload:1600, spread:0.02,  auto:true },
+  { name:'SMG',          dmg:12, rate:80,   mag:35, reload:1400, spread:0.028, auto:true },
+  { name:'SNIPER',       dmg:95, rate:1000, mag:5,  reload:2400, spread:0.002, auto:false },
+  { name:'BAT',          dmg:35, rate:600,  mag:Infinity, reload:0, spread:0, melee:true },
+  { name:'MACHETE',      dmg:50, rate:800,  mag:Infinity, reload:0, spread:0, melee:true }
+];
+
+DZ.AREAS = {
+  city:     { ground:0x2a2a2e, buildings:0x3a3028, fog:0x1a1a22, density:28 },
+  hospital: { ground:0x1a2028, buildings:0x2a3a4a, fog:0x101820, density:22 },
+  military: { ground:0x2a3022, buildings:0x3a3a2a, fog:0x181a14, density:24 },
+  lab:      { ground:0x1a0a1a, buildings:0x2a1a3a, fog:0x100010, density:20 }
+};
+
+/* -------- UI helpers -------- */
+const $ = id => document.getElementById(id);
+DZ.showScreen = id => {
+  ['menu','missions','settings','about','pause','complete','gameover'].forEach(s=>{
+    const el=$(s); if(el) el.classList.add('hidden');
+  });
+  if(id) $(id).classList.remove('hidden');
+};
+DZ.showCenter = (txt, ms=1500)=>{
+  const el=$('centerMsg'); el.textContent = txt || ''; el.classList.toggle('show', !!txt);
+  if(txt && ms>0) setTimeout(()=>{ if(el.textContent===txt){ el.classList.remove('show'); } }, ms);
+};
+
+/* =====================================================================
+   AUDIO — WebAudio procedural
+   ===================================================================== */
+DZ.Audio = {
+  ctx:null,
+  init(){
+    if(this.ctx) return;
+    try{ this.ctx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ console.warn('audio unavailable'); }
+  },
+  vol(){ return DZ.save.settings.muted ? 0 : DZ.save.settings.vol/10; },
+  tone(freq, dur, type='sine', gain=0.15, slide=0){
+    if(!this.ctx || this.vol()===0) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq+slide), t+dur);
+    g.gain.setValueAtTime(gain*this.vol(), t);
+    g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+    o.connect(g).connect(this.ctx.destination);
+    o.start(t); o.stop(t+dur);
+  },
+  noise(dur=0.08, gain=0.12, filter=1000){
+    if(!this.ctx || this.vol()===0) return;
+    const t = this.ctx.currentTime;
+    const buf = this.ctx.createBuffer(1, this.ctx.sampleRate*dur, this.ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.pow(1-i/data.length, 2);
+    const src = this.ctx.createBufferSource(); src.buffer = buf;
+    const g = this.ctx.createGain();
+    const f = this.ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=filter;
+    g.gain.value = gain*this.vol();
+    src.connect(f).connect(g).connect(this.ctx.destination);
+    src.start(t);
+  },
+  shot(){ this.noise(0.12, 0.22, 2500); this.tone(140, 0.08, 'sawtooth', 0.08, -80); },
+  reload(){ this.tone(220, 0.05, 'square', 0.06); setTimeout(()=>this.tone(180, 0.06, 'square', 0.06), 120); },
+  hit(){ this.noise(0.05, 0.14, 1500); },
+  hurt(){ this.tone(90, 0.2, 'sawtooth', 0.15, -40); },
+  growl(){ this.tone(70+Math.random()*30, 0.35, 'sawtooth', 0.05, -30); },
+  pickup(){ this.tone(660, 0.1, 'sine', 0.1, 200); setTimeout(()=>this.tone(880,0.12,'sine',0.1,0),80); },
+  win(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>this.tone(f, 0.2, 'sine', 0.15), i*120)); },
+  fail(){ [400,300,200,150].forEach((f,i)=>setTimeout(()=>this.tone(f, 0.25, 'sawtooth', 0.15), i*120)); }
+};
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+DZ.init = ()=>{
+  DZ.loadSave();
+
+  DZ.renderer = new THREE.WebGLRenderer({ antialias:DZ.save.settings.quality!=='low', powerPreference:'high-performance' });
+  DZ.renderer.setPixelRatio(DZ.save.settings.quality==='low'?1:Math.min(devicePixelRatio,2));
+  DZ.renderer.setSize(innerWidth, innerHeight);
+  DZ.renderer.shadowMap.enabled = DZ.save.settings.quality!=='low';
+  DZ.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  $('game').appendChild(DZ.renderer.domElement);
+
+  DZ.scene = new THREE.Scene();
+  DZ.scene.background = new THREE.Color(0x1a1a22);
+  DZ.scene.fog = new THREE.FogExp2(0x1a1a22, 0.018);
+  DZ.camera = new THREE.PerspectiveCamera(65, innerWidth/innerHeight, 0.1, 300);
+
+  DZ.hemi = new THREE.HemisphereLight(0x8899bb, 0x223344, 0.7); DZ.scene.add(DZ.hemi);
+  DZ.sun = new THREE.DirectionalLight(0xffddbb, 1.1);
+  DZ.sun.position.set(30,50,20); DZ.sun.castShadow = DZ.renderer.shadowMap.enabled;
+  DZ.sun.shadow.mapSize.set(1024,1024);
+  Object.assign(DZ.sun.shadow.camera, {left:-60,right:60,top:60,bottom:-60});
+  DZ.scene.add(DZ.sun);
+
+  // Player rig
+  DZ.player = new THREE.Group(); DZ.scene.add(DZ.player);
+  const bodyMat = new THREE.MeshStandardMaterial({color:0x2a3a4a, roughness:0.8});
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4,0.9,4,8), bodyMat);
+  body.position.y = 1.0; body.castShadow = true; DZ.player.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.28,16,16), new THREE.MeshStandardMaterial({color:0xd4a888}));
+  head.position.y = 1.85; head.castShadow = true; DZ.player.add(head);
+
+  DZ.gun = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.5), new THREE.MeshStandardMaterial({color:0x222, metalness:.7, roughness:.4}));
+  DZ.gun.position.set(0.35,1.35,-0.5); DZ.player.add(DZ.gun);
+
+  // Flashlight
+  DZ.flashlight = new THREE.SpotLight(0xffeeaa, 0, 25, Math.PI/6, 0.5, 1);
+  DZ.flashlight.position.set(0, 1.6, 0);
+  DZ.flashlight.target.position.set(0, 1.4, -5);
+  DZ.player.add(DZ.flashlight);
+  DZ.player.add(DZ.flashlight.target);
+  DZ.flashOn = false;
+
+  // Input state
+  DZ.keys = {}; DZ.mouse = { down:false };
+  DZ.moveInput = { x:0, y:0 };
+  DZ.yaw = 0; DZ.pitch = -0.15;
+  DZ.aiming = false; DZ.crouch = false;
+  DZ.hp = 100; DZ.maxHp = 100;
+  DZ.stamina = 100; DZ.maxStamina = 100;
+  DZ.medkits = 2;
+  DZ.weaponIndex = 0;
+  DZ.ammo = DZ.WEAPONS[0].mag;
+  DZ.weapon = DZ.WEAPONS[0];
+  DZ.enemies = [];
+  DZ.pickups = [];
+  DZ.particles = [];
+  DZ.obstacles = [];
+  DZ.killed = 0;
+  DZ.currentMission = null;
+  DZ.state = 'boot';
+  DZ.stats = { shots:0, hits:0 };
+
+  // Particle geo/mat
+  DZ.particleGeo = new THREE.BoxGeometry(0.08,0.08,0.08);
+
+  // Bind
+  DZ.bindInput();
+  DZ.bindUI();
+  addEventListener('resize', DZ.onResize);
+
+  // Apply settings
+  DZ.applySettings();
+
+  // Loop
+  DZ.lastTime = performance.now();
+  requestAnimationFrame(DZ.loop);
+
+  DZ.state = 'menu';
+  console.log('[DEAD ZONE] Ready. Missions:', DZ.MISSIONS.length, 'Weapons:', DZ.WEAPONS.length);
+};
+
+DZ.onResize = ()=>{
+  if(!DZ.renderer) return;
+  DZ.renderer.setSize(innerWidth, innerHeight);
+  DZ.camera.aspect = innerWidth/innerHeight;
+  DZ.camera.updateProjectionMatrix();
+};
+
+DZ.applySettings = ()=>{
+  const s = DZ.save.settings;
+  if(DZ.renderer){
+    DZ.renderer.shadowMap.enabled = s.quality !== 'low';
+    DZ.renderer.setPixelRatio(s.quality==='low'?1:Math.min(devicePixelRatio,2));
+  }
+  $('muteBtn').textContent = s.muted ? '🔇' : '🔊';
+  DZ.persist();
+};
+
+/* =====================================================================
+   WORLD BUILDING (per area)
+   ===================================================================== */
+DZ.clearWorld = ()=>{
+  // remove all obstacles/enemies/pickups
+  DZ.enemies.forEach(e=>DZ.scene.remove(e.obj));
+  DZ.enemies = [];
+  DZ.pickups.forEach(p=>DZ.scene.remove(p.obj));
+  DZ.pickups = [];
+  if(DZ.ground){ DZ.scene.remove(DZ.ground); DZ.ground=null; }
+  DZ.obstacles = [];
+  if(DZ.buildingGroup){ DZ.scene.remove(DZ.buildingGroup); DZ.buildingGroup = null; }
+};
+
+DZ.buildWorld = (areaKey='city')=>{
+  DZ.clearWorld();
+  const cfg = DZ.AREAS[areaKey] || DZ.AREAS.city;
+  DZ.scene.background = new THREE.Color(cfg.fog);
+  DZ.scene.fog.color.setHex(cfg.fog);
+
+  DZ.ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(200,200,32,32),
+    new THREE.MeshStandardMaterial({color:cfg.ground, roughness:1})
+  );
+  DZ.ground.rotation.x = -Math.PI/2;
+  DZ.ground.receiveShadow = true;
+  DZ.scene.add(DZ.ground);
+
+  DZ.buildingGroup = new THREE.Group();
+  DZ.scene.add(DZ.buildingGroup);
+
+  const count = cfg.density;
+  for(let i=0;i<count;i++){
+    const w = 4+Math.random()*6, h = 4+Math.random()*12, d = 4+Math.random()*6;
+    const shade = new THREE.Color(cfg.buildings).offsetHSL(0, 0, (Math.random()-0.5)*0.1);
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(w,h,d),
+      new THREE.MeshStandardMaterial({color:shade, roughness:0.95})
+    );
+    let x,z,tries=0;
+    do { x=(Math.random()-0.5)*120; z=(Math.random()-0.5)*120; tries++; }
+    while(Math.hypot(x,z) < 12 && tries<20);
+    mesh.position.set(x, h/2, z);
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    DZ.buildingGroup.add(mesh);
+    DZ.obstacles.push({x, z, r: Math.max(w,d)/2 + 0.6});
+  }
+
+  // Debris / vehicles
+  for(let i=0;i<20;i++){
+    const w=1+Math.random()*2, h=0.8, d=1+Math.random()*2;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:1}));
+    m.position.set((Math.random()-0.5)*110, h/2, (Math.random()-0.5)*110);
+    m.castShadow = true; m.receiveShadow = true;
+    DZ.buildingGroup.add(m);
+    DZ.obstacles.push({x:m.position.x, z:m.position.z, r: Math.max(w,d)/2});
+  }
+
+  // Ambient light per area
+  if(areaKey==='lab' || areaKey==='hospital'){
+    DZ.hemi.intensity = 0.3;
+    DZ.sun.intensity = 0.4;
+  } else {
+    DZ.hemi.intensity = 0.7;
+    DZ.sun.intensity = 1.1;
+  }
+};
+
+/* =====================================================================
+   ENEMIES
+   ===================================================================== */
+DZ.ENEMY_TYPES = {
+  walker:  { color:0x5a5a3a, speed:1.5, hp:50,  dmg:10, scale:1,   headY:1.65, dropRate:0.3 },
+  runner:  { color:0x8a2020, speed:3.2, hp:40,  dmg:12, scale:1,   headY:1.65, dropRate:0.35 },
+  brute:   { color:0x3d1a1a, speed:1.3, hp:180, dmg:25, scale:1.5, headY:2.4,  dropRate:0.6 },
+  bloater: { color:0x6a7a2a, speed:1.0, hp:70,  dmg:40, scale:1.2, headY:1.95, dropRate:0.7, explodes:true },
+  alpha:   { color:0x4a0a0a, speed:1.8, hp:900, dmg:40, scale:2.4, headY:3.6,  dropRate:1.0 }
+};
+
+DZ.spawnEnemy = (type='walker')=>{
+  const cfg = DZ.ENEMY_TYPES[type] || DZ.ENEMY_TYPES.walker;
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.35*cfg.scale, 0.9*cfg.scale, 4, 8),
+    new THREE.MeshStandardMaterial({color:cfg.color, roughness:0.9, emissive: new THREE.Color(cfg.color).multiplyScalar(0.15)})
+  );
+  body.position.y = 0.9*cfg.scale; body.castShadow = true; g.add(body);
+  const headMat = new THREE.MeshStandardMaterial({color:0x2a6a2a, emissive:0x113311});
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.25*cfg.scale,12,12), headMat);
+  head.position.y = cfg.headY; head.name = 'head'; g.add(head);
+
+  let x,z,tries=0;
+  do { x=(Math.random()-0.5)*100; z=(Math.random()-0.5)*100; tries++; }
+  while(Math.hypot(x-DZ.player.position.x, z-DZ.player.position.z) < 15 && tries<30);
+  g.position.set(x, 0, z);
+  DZ.scene.add(g);
+
+  DZ.enemies.push({
+    obj:g, type, hp:cfg.hp, maxHp:cfg.hp, speed:cfg.speed, dmg:cfg.dmg,
+    scale:cfg.scale, radius:0.6*cfg.scale, lastAtk:0, lastGrowl:0,
+    body, head, hitFlash:0
+  });
+};
+
+/* =====================================================================
+   PARTICLES & PICKUPS
+   ===================================================================== */
+DZ.burst = (pos, n=8, col=0xffaa33, spread=4)=>{
+  for(let i=0;i<n;i++){
+    const mat = new THREE.MeshBasicMaterial({color:col, transparent:true});
+    const p = new THREE.Mesh(DZ.particleGeo, mat);
+    p.position.copy(pos);
+    const v = new THREE.Vector3(
+      (Math.random()-0.5)*spread,
+      Math.random()*3+1,
+      (Math.random()-0.5)*spread
+    );
+    DZ.scene.add(p);
+    DZ.particles.push({ mesh:p, vel:v, life:0.6 });
+  }
+};
+
+DZ.dropLoot = (pos, type)=>{
+  let color;
+  if(type==='ammo') color = 0xffff33;
+  else if(type==='health') color = 0x4dff4d;
+  else if(type==='medkit') color = 0x4dbb7a;
+  else color = 0xcccccc;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.4,0.4,0.4),
+    new THREE.MeshStandardMaterial({color, emissive:new THREE.Color(color).multiplyScalar(0.4)}));
+  m.position.copy(pos); m.position.y = 0.5;
+  DZ.scene.add(m);
+  DZ.pickups.push({ obj:m, type, t:0 });
+};
+
+/* =====================================================================
+   INPUT
+   ===================================================================== */
+DZ.bindInput = ()=>{
+  addEventListener('keydown', e=>{
+    DZ.keys[e.code] = true;
+    if(e.code==='Escape'){ if(DZ.state==='playing') DZ.pause(); else if(DZ.state==='paused') DZ.resume(); }
+  });
+  addEventListener('keyup', e=>{ DZ.keys[e.code] = false; });
+
+  addEventListener('mousemove', e=>{
+    if(DZ.state!=='playing') return;
+    if(!document.pointerLockElement && !DZ.mouseLocked) return;
+    const s = DZ.save.settings.sens / 5;
+    DZ.yaw   -= (e.movementX||0) * 0.0022 * s;
+    DZ.pitch -= (e.movementY||0) * 0.0022 * s;
+    DZ.pitch = Math.max(-0.9, Math.min(0.6, DZ.pitch));
+  });
+
+  addEventListener('mousedown', e=>{
+    if(DZ.state!=='playing') return;
+    if(e.button===0){ DZ.mouse.down=true; DZ.tryShoot(); }
+  });
+  addEventListener('mouseup', e=>{ if(e.button===0) DZ.mouse.down=false; });
+  addEventListener('contextmenu', e=>e.preventDefault());
+
+  addEventListener('keydown', e=>{
+    if(DZ.state!=='playing') return;
+    const s = DZ.save.settings.sens / 5;
+    if(e.code==='KeyR') DZ.reload();
+    else if(e.code==='Digit1') DZ.switchWeapon(0);
+    else if(e.code==='Digit2') DZ.switchWeapon(1);
+    else if(e.code==='Digit3') DZ.switchWeapon(2);
+    else if(e.code==='Digit4') DZ.switchWeapon(3);
+    else if(e.code==='Digit5') DZ.switchWeapon(4);
+    else if(e.code==='Digit6') DZ.switchWeapon(5);
+    else if(e.code==='Digit7') DZ.switchWeapon(6);
+    else if(e.code==='Digit8') DZ.switchWeapon(7);
+    else if(e.code==='KeyQ') DZ.switchWeapon((DZ.weaponIndex+1)%DZ.WEAPONS.length);
+    else if(e.code==='KeyH') DZ.useMed();
+    else if(e.code==='KeyC'){ DZ.crouch=!DZ.crouch; $('btnCrouch').classList.toggle('on', DZ.crouch); }
+    else if(e.code==='KeyF'){ DZ.toggleFlashlight(); }
+    else if(e.code==='Space'){ e.preventDefault(); DZ.tryJump(); }
+    else if(e.code==='KeyM'){ DZ.toggleMute(); }
+  });
+
+  // Detect touch
+  if('ontouchstart' in window || navigator.maxTouchPoints>0){
+    $('touchControls').classList.add('active');
+    DZ.setupTouch();
+  }
+};
+
+DZ.setupTouch = ()=>{
+  const base = $('joyBase'), knob = $('joyKnob');
+  let jActive=false, jId=null, jCx=0, jCy=0;
+  const jStart = e=>{
+    e.preventDefault();
+    const t=e.changedTouches[0];
+    jActive=true; jId=t.identifier;
+    const r=base.getBoundingClientRect();
+    jCx=r.left+r.width/2; jCy=r.top+r.height/2;
+    jMove(e);
+  };
+  const jMove = e=>{
+    if(!jActive) return;
+    const t=[...e.touches].find(x=>x.identifier===jId); if(!t) return;
+    let dx=t.clientX-jCx, dy=t.clientY-jCy;
+    const max=50, d=Math.hypot(dx,dy);
+    if(d>max){ dx=dx/d*max; dy=dy/d*max; }
+    knob.style.transform=`translate(${dx}px,${dy}px)`;
+    DZ.moveInput={x:dx/max, y:dy/max};
+  };
+  const jEnd = ()=>{
+    jActive=false; jId=null; DZ.moveInput={x:0,y:0};
+    knob.style.transform='translate(0,0)';
+  };
+  base.addEventListener('touchstart', jStart, {passive:false});
+  base.addEventListener('touchmove', jMove, {passive:false});
+  base.addEventListener('touchend', jEnd);
+  base.addEventListener('touchcancel', jEnd);
+
+  // Look zone
+  const lz = $('lookZone');
+  let lActive=false, lId=null, lx=0, ly=0;
+  lz.addEventListener('touchstart', e=>{
+    if(DZ.state!=='playing') return;
+    e.preventDefault();
+    const t=e.changedTouches[0];
+    lActive=true; lId=t.identifier; lx=t.clientX; ly=t.clientY;
+  }, {passive:false});
+  lz.addEventListener('touchmove', e=>{
+    if(!lActive || DZ.state!=='playing') return;
+    e.preventDefault();
+    const t=[...e.touches].find(x=>x.identifier===lId); if(!t) return;
+    const s = DZ.save.settings.sens / 5;
+    DZ.yaw   -= (t.clientX-lx)*0.005*s;
+    DZ.pitch -= (t.clientY-ly)*0.005*s;
+    DZ.pitch = Math.max(-0.9, Math.min(0.6, DZ.pitch));
+    lx=t.clientX; ly=t.clientY;
+  }, {passive:false});
+  lz.addEventListener('touchend', ()=>{ lActive=false; lId=null; });
+
+  // Touch buttons
+  const bind = (id, fn, toggle=false)=>{
+    const el = $(id);
+    const press = e=>{ e.preventDefault(); fn(); if(toggle) el.classList.toggle('on'); };
+    el.addEventListener('touchstart', press, {passive:false});
+    el.addEventListener('click', press);
+  };
+  bind('btnFire',   ()=>{ DZ.mouse.down=true; DZ.tryShoot(); });
+  $('btnFire').addEventListener('touchend', ()=>{ DZ.mouse.down=false; });
+  $('btnFire').addEventListener('touchcancel', ()=>{ DZ.mouse.down=false; });
+  bind('btnReload', ()=>DZ.reload());
+  bind('btnJump',   ()=>DZ.tryJump());
+  bind('btnCrouch', ()=>{ DZ.crouch=!DZ.crouch; }, true);
+  bind('btnSwap',   ()=>DZ.switchWeapon((DZ.weaponIndex+1)%DZ.WEAPONS.length));
+  bind('btnMed',    ()=>DZ.useMed());
+  bind('btnAim',    ()=>{ DZ.aiming=!DZ.aiming; }, true);
+};
+
+/* =====================================================================
+   WEAPONS
+   ===================================================================== */
+DZ.switchWeapon = i=>{
+  if(i<0 || i>=DZ.WEAPONS.length) return;
+  DZ.weaponIndex = i;
+  DZ.weapon = DZ.WEAPONS[i];
+  DZ.ammo = DZ.weapon.mag === Infinity ? Infinity : DZ.weapon.mag;
+  $('wepName').textContent = DZ.weapon.name;
+  DZ.updateAmmoUI();
+  DZ.Audio.reload();
+};
+
+DZ.updateAmmoUI = ()=>{
+  const a = DZ.weapon.mag === Infinity ? '∞' : DZ.ammo;
+  const c = DZ.weapon.mag === Infinity ? '∞' : DZ.weapon.mag;
+  $('ammoBig').innerHTML = `${a}<span>/${c}</span>`;
+};
+
+DZ.reload = ()=>{
+  if(DZ.state!=='playing') return;
+  if(DZ.weapon.mag === Infinity) return;
+  if(DZ.ammo === DZ.weapon.mag) return;
+  if(DZ.reloading) return;
+  DZ.reloading = true;
+  DZ.showCenter('RELOADING...', 0);
+  DZ.Audio.reload();
+  setTimeout(()=>{
+    DZ.ammo = DZ.weapon.mag;
+    DZ.reloading = false;
+    DZ.updateAmmoUI();
+    DZ.showCenter('', 0);
+  }, DZ.weapon.reload);
+};
+
+DZ.tryShoot = ()=>{
+  if(DZ.state!=='playing') return;
+  if(DZ.reloading) return;
+  const now = performance.now();
+  if(now - (DZ.lastShot||0) < DZ.weapon.rate) return;
+  DZ.lastShot = now;
+
+  if(DZ.weapon.mag !== Infinity){
+    if(DZ.ammo <= 0){ DZ.reload(); return; }
+    DZ.ammo--;
+    DZ.updateAmmoUI();
+  }
+
+  DZ.stats.shots++;
+  DZ.pitch += 0.012;
+  DZ.burst(DZ.player.position.clone().add(new THREE.Vector3(0,1.4,0)), 3, 0xffcc33, 3);
+  DZ.Audio.shot();
+
+  const pellets = DZ.weapon.pellets || 1;
+  for(let p=0;p<pellets;p++){
+    const spread = DZ.aiming ? DZ.weapon.spread*0.4 : DZ.weapon.spread;
+    const dir = new THREE.Vector3(
+      Math.sin(DZ.yaw) + (Math.random()-0.5)*spread*2,
+      -Math.sin(DZ.pitch) + (Math.random()-0.5)*spread*2,
+      Math.cos(DZ.yaw)
+    ).normalize();
+    const origin = DZ.player.position.clone().add(new THREE.Vector3(0,1.4,0));
+    const ray = new THREE.Raycaster(origin, dir, 0, 60);
+    const targets = DZ.enemies.map(e=>e.obj);
+    const hits = ray.intersectObjects(targets, true);
+    if(hits.length){
+      let obj = hits[0].object;
+      let isHead = false;
+      if(obj.name === 'head') isHead = true;
+      while(obj.parent && !DZ.enemies.find(e=>e.obj===obj)) obj = obj.parent;
+      const en = DZ.enemies.find(e=>e.obj===obj);
+      if(en){
+        const dmg = DZ.weapon.dmg * (isHead ? 2 : 1);
+        DZ.damageEnemy(en, dmg);
+        DZ.stats.hits++;
+        DZ.flashHit(isHead);
+      }
+    }
+  }
+};
+
+DZ.damageEnemy = (en, dmg)=>{
+  en.hp -= dmg;
+  en.hitFlash = 0.12;
+  DZ.burst(en.obj.position.clone().add(new THREE.Vector3(0,en.scale,0)), 6, 0xaa2222, 3);
+  DZ.Audio.hit();
+  if(en.hp <= 0) DZ.killEnemy(en);
+};
+
+DZ.killEnemy = (en)=>{
+  const pos = en.obj.position.clone();
+  DZ.scene.remove(en.obj);
+  DZ.enemies = DZ.enemies.filter(e=>e!==en);
+  DZ.killed++;
+  DZ.save.totalKills = (DZ.save.totalKills||0) + 1;
+  $('kills').textContent = 'KILLS: ' + DZ.killed;
+
+  // Drop loot
+  const cfg = DZ.ENEMY_TYPES[en.type];
+  if(Math.random() < cfg.dropRate){
+    const types = ['ammo', 'ammo', 'health', 'medkit'];
+    DZ.dropLoot(pos, types[Math.floor(Math.random()*types.length)]);
+  }
+
+  DZ.Audio.hurt();
+  DZ.updateObjective();
+
+  // Boss special
+  if(en.type === 'alpha') $('bossBar').classList.remove('show');
+
+  if(DZ.currentMission && DZ.killed >= DZ.currentMission.target) DZ.completeMission();
+};
+
+DZ.flashHit = (head=false)=>{
+  const hm = $('hitMarker');
+  hm.style.opacity = '1';
+  hm.classList.toggle('head', head);
+  setTimeout(()=>hm.style.opacity='0', 120);
+};
+
+DZ.useMed = ()=>{
+  if(DZ.state!=='playing') return;
+  if(DZ.medkits <= 0){ DZ.showCenter('NO MEDKITS', 1200); return; }
+  if(DZ.hp >= DZ.maxHp) return;
+  DZ.medkits--;
+  DZ.hp = Math.min(DZ.maxHp, DZ.hp + 50);
+  DZ.Audio.pickup();
+  $('medcount').textContent = 'MEDKITS: ' + DZ.medkits;
+  DZ.showCenter('+50 HEALTH', 900);
+};
+
+DZ.tryJump = ()=>{
+  if(DZ.state!=='playing') return;
+  if(DZ.onGround){ DZ.vy = 6; DZ.onGround = false; }
+};
+
+DZ.toggleFlashlight = ()=>{
+  DZ.flashOn = !DZ.flashOn;
+  DZ.flashlight.intensity = DZ.flashOn ? 2.0 : 0;
+  $('flashlightInd').classList.toggle('on', DZ.flashOn);
+  DZ.Audio.tone(600, 0.05, 'square', 0.08);
+};
+
+DZ.toggleMute = ()=>{
+  DZ.save.settings.muted = !DZ.save.settings.muted;
+  DZ.applySettings();
+};
+
+/* =====================================================================
+   MISSION FLOW
+   ===================================================================== */
+DZ.startMission = (idx)=>{
+  if(!DZ.scene){ console.error('Scene not ready'); return; }
+  const m = DZ.MISSIONS[idx];
+  if(!m){ console.error('Bad mission', idx); return; }
+  DZ.currentMission = m;
+
+  // Show cinematic
+  DZ.showCinematic(m, ()=>{
+    // actual start
+    DZ.enemies.forEach(e=>DZ.scene.remove(e.obj));
+    DZ.enemies = [];
+    DZ.pickups.forEach(p=>DZ.scene.remove(p.obj));
+    DZ.pickups = [];
+    DZ.killed = 0;
+    DZ.stats = { shots:0, hits:0 };
+    DZ.hp = DZ.maxHp = 100;
+    DZ.stamina = DZ.maxStamina = 100;
+    DZ.medkits = 2;
+    DZ.weaponIndex = 0;
+    DZ.weapon = DZ.WEAPONS[0];
+    DZ.ammo = DZ.weapon.mag;
+    DZ.reloading = false;
+    DZ.moveInput = {x:0,y:0};
+    DZ.vy = 0; DZ.onGround = true;
+    DZ.crouch = false; DZ.aiming = false;
+    DZ.player.position.set(0, 0, 0);
+    DZ.flashOn = false;
+    DZ.flashlight.intensity = 0;
+
+    DZ.buildWorld(m.area);
+
+    // spawn waves
+    const total = m.target;
+    const typePool = ['walker','walker','runner'];
+    for(let i=0;i<total;i++){
+      let t;
+      if(m.boss && i===total-1) t = 'alpha';
+      else if(i%7===0 && i>0) t = 'brute';
+      else if(i%5===0 && i>0) t = 'bloater';
+      else t = typePool[i%typePool.length];
+      setTimeout(()=>{ if(DZ.state==='playing') DZ.spawnEnemy(t); }, i*250);
+    }
+
+    $('kills').textContent = 'KILLS: 0';
+    $('wepName').textContent = DZ.weapon.name;
+    $('medcount').textContent = 'MEDKITS: ' + DZ.medkits;
+    DZ.updateAmmoUI();
+    DZ.updateObjective();
+
+    if(m.boss) $('bossBar').classList.add('show');
+
+    DZ.state = 'playing';
+    $('hud').classList.remove('hidden');
+    DZ.showScreen(null);
+    DZ.Audio.init();
+  });
+};
+
+DZ.showCinematic = (mission, done)=>{
+  const el = $('cinematic');
+  $('cineTitle').textContent = mission.name;
+  $('cineText').textContent = mission.cine || mission.desc;
+  el.classList.add('show');
+
+  const skip = ()=>{ el.classList.remove('show'); $('btnCineSkip').onclick = null; done(); };
+  $('btnCineSkip').onclick = skip;
+  DZ._cineTimeout = setTimeout(skip, 6000);
+};
+
+DZ.updateObjective = ()=>{
+  if(!DZ.currentMission) return;
+  const left = Math.max(0, DZ.currentMission.target - DZ.killed);
+  $('objText').textContent = `${DZ.currentMission.desc} (${left} left)`;
+};
+
+DZ.completeMission = ()=>{
+  DZ.state = 'complete';
+  const m = DZ.currentMission;
+  if(!DZ.save.completed.includes(m.id)) DZ.save.completed.push(m.id);
+  const next = m.id + 1;
+  if(next < DZ.MISSIONS.length && !DZ.save.unlocked.includes(next)) DZ.save.unlocked.push(next);
+  DZ.save.totalKills = (DZ.save.totalKills||0);
+  DZ.persist();
+  DZ.Audio.win();
+
+  const acc = DZ.stats.shots>0 ? Math.round(DZ.stats.hits/DZ.stats.shots*100) : 0;
+  $('completeStats').innerHTML = `
+    <div>🎯 Zombies eliminated: <b>${DZ.killed}</b></div>
+    <div>🎯 Accuracy: <b>${acc}%</b></div>
+    <div>💀 Total kills: <b>${DZ.save.totalKills}</b></div>
+    <div>⭐ Reward: <b>+${m.target*10} XP</b></div>
+  `;
+  $('hud').classList.add('hidden');
+  $('bossBar').classList.remove('show');
+  DZ.showScreen('complete');
+};
+
+DZ.pause = ()=>{
+  if(DZ.state!=='playing') return;
+  DZ.state = 'paused';
+  $('hud').classList.add('hidden');
+  DZ.showScreen('pause');
+};
+
+DZ.resume = ()=>{
+  if(DZ.state!=='paused') return;
+  DZ.state = 'playing';
+  $('hud').classList.remove('hidden');
+  DZ.showScreen(null);
+};
+
+DZ.gameOver = ()=>{
+  DZ.state = 'gameover';
+  DZ.Audio.fail();
+  $('hud').classList.add('hidden');
+  $('bossBar').classList.remove('show');
+  DZ.showScreen('gameover');
+};
+
+DZ.damagePlayer = (dmg)=>{
+  if(DZ.state!=='playing') return;
+  DZ.hp -= dmg;
+  DZ.lastDamageTime = performance.now();
+  $('damageVignette').style.opacity = '1';
+  DZ.burst(DZ.player.position.clone().add(new THREE.Vector3(0,1.4,0)), 6, 0xcc2222);
+  DZ.Audio.hurt();
+  if(DZ.save.settings.vibrate && navigator.vibrate) navigator.vibrate(80);
+  if(DZ.hp <= 0) DZ.gameOver();
+};
+
+/* =====================================================================
+   LOOP
+   ===================================================================== */
+DZ.loop = ()=>{
+  requestAnimationFrame(DZ.loop);
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - DZ.lastTime)/1000);
+  DZ.lastTime = now;
+
+  if(DZ.state==='playing') DZ.update(dt);
+  DZ.renderer.render(DZ.scene, DZ.camera);
+};
+
+DZ.update = (dt)=>{
+  const now = performance.now();
+
+  // --- Movement input ---
+  let mx = 0, mz = 0;
+  if(DZ.keys['KeyW']||DZ.keys['ArrowUp'])    mz -= 1;
+  if(DZ.keys['KeyS']||DZ.keys['ArrowDown'])  mz += 1;
+  if(DZ.keys['KeyA']||DZ.keys['ArrowLeft'])  mx -= 1;
+  if(DZ.keys['KeyD']||DZ.keys['ArrowRight']) mx += 1;
+  if(DZ.moveInput){ mx += DZ.moveInput.x; mz += DZ.moveInput.y; }
+  const len = Math.hypot(mx,mz);
+  if(len>1){ mx/=len; mz/=len; }
+
+  // --- Sprint / stamina ---
+  const wantSprint = (DZ.keys['ShiftLeft']||DZ.keys['ShiftRight']);
+  const sprint = wantSprint && DZ.stamina>0 && !DZ.crouch;
+  let speed = DZ.crouch ? 2.2 : 5.5;
+  if(sprint){ speed = 8; DZ.stamina = Math.max(0, DZ.stamina - 30*dt); }
+  else DZ.stamina = Math.min(DZ.maxStamina, DZ.stamina + 20*dt);
+
+  // --- Camera-relative move ---
+  const sinY = Math.sin(DZ.yaw), cosY = Math.cos(DZ.yaw);
+  const wx = (mx*cosY + mz*sinY);
+  const wz = (mx*sinY - mz*cosY);
+
+  let nx = DZ.player.position.x + wx*speed*dt;
+  let nz = DZ.player.position.z + wz*speed*dt;
+
+  // Obstacle collision
+  for(const o of DZ.obstacles){
+    const dx = nx-o.x, dz = nz-o.z, d = Math.hypot(dx,dz);
+    if(d < o.r && d>0.0001){ const push=(o.r-d); nx += (dx/d)*push; nz += (dz/d)*push; }
+  }
+  DZ.player.position.x = nx;
+  DZ.player.position.z = nz;
+
+  // Gravity
+  DZ.vy -= 20*dt;
+  DZ.player.position.y += DZ.vy*dt;
+  if(DZ.player.position.y <= 0){ DZ.player.position.y = 0; DZ.vy = 0; DZ.onGround = true; }
+
+  // Body facing
+  if(len > 0.1) DZ.player.rotation.y = Math.atan2(-wx, -wz);
+
+  // Head-bob when moving
+  const moving = len > 0.1;
+  const bobAmt = moving ? (sprint ? 0.08 : 0.04) : 0;
+  DZ.player.position.y += Math.sin(now*0.012) * bobAmt * (DZ.onGround ? 1 : 0);
+
+  // --- Camera ---
+  const camDist = DZ.aiming ? 2.2 : 4.2;
+  const camHeight = 1.7 + (DZ.aiming ? 0.05 : 0.3);
+  const tx = DZ.player.position.x + Math.sin(DZ.yaw)*camDist;
+  const ty = DZ.player.position.y + camHeight + Math.sin(-DZ.pitch)*camDist;
+  const tz = DZ.player.position.z + Math.cos(DZ.yaw)*camDist;
+  DZ.camera.position.lerp(new THREE.Vector3(tx,ty,tz), 1-Math.pow(0.001,dt));
+
+  // Camera collision: prevent through walls
+  for(const o of DZ.obstacles){
+    const dx = DZ.camera.position.x-o.x, dz = DZ.camera.position.z-o.z, d = Math.hypot(dx,dz);
+    if(d < o.r+0.3 && d>0.001){
+      const push = (o.r+0.3-d);
+      DZ.camera.position.x += (dx/d)*push;
+      DZ.camera.position.z += (dz/d)*push;
+    }
+  }
+
+  const lookAt = DZ.player.position.clone().add(new THREE.Vector3(0, 1.4, 0));
+  DZ.camera.lookAt(lookAt);
+
+  // Gun follows
+  DZ.gun.position.set(
+    DZ.player.position.x + Math.sin(DZ.yaw)*0.3,
+    DZ.player.position.y + 1.35,
+    DZ.player.position.z + Math.cos(DZ.yaw)*0.3
+  );
+  DZ.gun.rotation.y = DZ.yaw;
+  DZ.gun.rotation.x = DZ.pitch;
+
+  // --- Flashlight follow camera dir ---
+  if(DZ.flashOn){
+    DZ.flashlight.target.position.set(
+      Math.sin(DZ.yaw)*5,
+      1.4 + Math.sin(-DZ.pitch)*5,
+      Math.cos(DZ.yaw)*5
+    );
+  }
+
+  // --- Enemies ---
+  for(const e of DZ.enemies){
+    const dx = DZ.player.position.x - e.obj.position.x;
+    const dz = DZ.player.position.z - e.obj.position.z;
+    const dist = Math.hypot(dx,dz);
+    if(dist < 1.4 + e.radius && now - e.lastAtk > 900){
+      e.lastAtk = now;
+      DZ.damagePlayer(e.dmg);
+    } else if(dist < 40 && dist > 0.5){
+      // Chase
+      const sp = e.speed * (sprint ? 1 : 1);
+      const nx2 = e.obj.position.x + (dx/dist)*sp*dt;
+      const nz2 = e.obj.position.z + (dz/dist)*sp*dt;
+      let blocked = false;
+      for(const o of DZ.obstacles){
+        if(Math.hypot(nx2-o.x, nz2-o.z) < o.r){ blocked = true; break; }
+      }
+      if(!blocked){ e.obj.position.x = nx2; e.obj.position.z = nz2; }
+      e.obj.rotation.y = Math.atan2(dx, dz);
+      // Random growl
+      if(now - e.lastGrowl > 3000 + Math.random()*4000){ e.lastGrowl = now; DZ.Audio.growl(); }
+    }
+    // Hit flash
+    if(e.hitFlash > 0){
+      e.hitFlash -= dt;
+      e.body.material.emissive = new THREE.Color(0xff2222);
+      e.body.material.emissiveIntensity = 0.6;
+    } else if(e.body.material.emissive){
+      e.body.material.emissiveIntensity = 0;
+    }
+
+    // Boss health
+    if(e.type === 'alpha'){
+      $('bossFill').style.width = (e.hp/e.maxHp*100) + '%';
+    }
+  }
+
+  // --- Pickups ---
+  for(let i=DZ.pickups.length-1;i>=0;i--){
+    const p = DZ.pickups[i];
+    p.t += dt;
+    p.obj.rotation.y += dt*2;
+    p.obj.position.y = 0.5 + Math.sin(p.t*2)*0.1;
+    const d = Math.hypot(p.obj.position.x-DZ.player.position.x, p.obj.position.z-DZ.player.position.z);
+    if(d < 1.5){
+      if(p.type==='ammo'){ DZ.ammo = DZ.weapon.mag; DZ.updateAmmoUI(); DZ.showCenter('+AMMO', 600); }
+      else if(p.type==='health'){ DZ.hp = Math.min(DZ.maxHp, DZ.hp+25); DZ.showCenter('+25 HEALTH', 600); }
+      else if(p.type==='medkit'){ DZ.medkits++; $('medcount').textContent='MEDKITS: '+DZ.medkits; DZ.showCenter('+MEDKIT', 600); }
+      DZ.Audio.pickup();
+      DZ.scene.remove(p.obj);
+      DZ.pickups.splice(i,1);
+    }
+  }
+
+  // --- Particles ---
+  for(let i=DZ.particles.length-1;i>=0;i--){
+    const p = DZ.particles[i];
+    p.life -= dt;
+    p.vel.y -= 12*dt;
+    p.mesh.position.addScaledVector(p.vel, dt);
+    p.mesh.material.opacity = Math.max(0, p.life*2);
+    if(p.life <= 0){ DZ.scene.remove(p.mesh); DZ.particles.splice(i,1); }
+  }
+
+  // --- HUD ---
+  $('healthBar').style.width = (DZ.hp/DZ.maxHp*100) + '%';
+  $('staminaBar').style.width = (DZ.stamina/DZ.maxStamina*100) + '%';
+
+  // Auto-fire
+  if(DZ.mouse.down && DZ.weapon.auto) DZ.tryShoot();
+
+  // Vignette fade
+  if(now - DZ.lastDamageTime > 500) $('damageVignette').style.opacity = '0';
+
+  // Minimap
+  DZ.drawMinimap();
+};
+
+DZ.drawMinimap = ()=>{
+  const c = $('minimap');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,120,120);
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0,0,120,120);
+
+  const scale = 120/120; // 1px = 1 unit, center = player
+  const px = DZ.player.position.x, pz = DZ.player.position.z;
+  const draw = (x, z, color, size=3)=>{
+    const dx = (x - px) * scale;
+    const dz = (z - pz) * scale;
+    if(Math.hypot(dx,dz) < 55){
+      ctx.fillStyle = color;
+      ctx.fillRect(60+dx-size/2, 60+dz-size/2, size, size);
+    }
+  };
+  // Obstacles
+  DZ.obstacles.forEach(o=>draw(o.x, o.z, 'rgba(100,100,100,0.5)', 4));
+  // Enemies
+  DZ.enemies.forEach(e=>{
+    const col = e.type==='alpha' ? '#ff2222' : e.type==='runner' ? '#ffaa22' : '#88ff44';
+    draw(e.obj.position.x, e.obj.position.z, col, e.type==='alpha'?6:3);
+  });
+  // Pickups
+  DZ.pickups.forEach(p=>draw(p.obj.position.x, p.obj.position.z, '#ffff33', 2));
+  // Player
+  ctx.fillStyle = '#c1272d';
+  ctx.beginPath();
+  ctx.arc(60, 60, 3, 0, Math.PI*2);
+  ctx.fill();
+  // Facing dir
+  ctx.strokeStyle = '#c1272d';
+  ctx.beginPath();
+  ctx.moveTo(60, 60);
+  ctx.lineTo(60 + Math.sin(DZ.yaw)*10, 60 + Math.cos(DZ.yaw)*10);
+  ctx.stroke();
+};
+
+/* =====================================================================
+   UI WIRING
+   ===================================================================== */
+DZ.bindUI = ()=>{
+  $('btnPlay').onclick = ()=>{
+    DZ.startMission(0);
+  };
+  $('btnContinue').onclick = ()=>{
+    const last = DZ.save.unlocked.length ? DZ.save.unlocked[DZ.save.unlocked.length-1] : 0;
+    DZ.startMission(last);
+  };
+  $('btnMissions').onclick = ()=>{ DZ.renderMissions(); DZ.showScreen('missions'); };
+  $('btnSettings').onclick = ()=>{ DZ.loadSettingsUI(); DZ.showScreen('settings'); };
+  $('btnSettings2').onclick = ()=>{ DZ.loadSettingsUI(); DZ.showScreen('settings'); };
+  $('btnAbout').onclick = ()=>DZ.showScreen('about');
+  $('btnBackMissions').onclick = ()=>DZ.showScreen('menu');
+  $('btnBackSettings').onclick = ()=>{
+    if(DZ.state==='paused') DZ.showScreen('pause');
+    else DZ.showScreen('menu');
+  };
+  $('btnBackAbout').onclick = ()=>DZ.showScreen('menu');
+
+  $('btnResume').onclick = ()=>DZ.resume();
+  $('btnRestart').onclick = ()=>{ DZ.startMission(DZ.currentMission.id); };
+  $('btnQuit').onclick = ()=>{ DZ.state='menu'; $('hud').classList.add('hidden'); DZ.showScreen('menu'); };
+  $('btnNext').onclick = ()=>{
+    const next = DZ.currentMission.id + 1;
+    if(next < DZ.MISSIONS.length) DZ.startMission(next);
+    else { DZ.state='menu'; DZ.showScreen('menu'); }
+  };
+  $('btnRetry').onclick = ()=>DZ.startMission(DZ.currentMission.id);
+  $('btnGiveUp').onclick = ()=>{ DZ.state='menu'; $('hud').classList.add('hidden'); DZ.showScreen('menu'); };
+  $('btnPause').onclick = ()=>{ if(DZ.state==='playing') DZ.pause(); };
+  $('muteBtn').onclick = ()=>DZ.toggleMute();
+
+  // Settings
+  $('sens').oninput  = e=>{ DZ.save.settings.sens = parseInt(e.target.value); $('sensVal').textContent = e.target.value; DZ.persist(); };
+  $('vol').oninput   = e=>{ DZ.save.settings.vol = parseInt(e.target.value); $('volVal').textContent = e.target.value; DZ.persist(); };
+  $('quality').onchange = e=>{ DZ.save.settings.quality = e.target.value; DZ.applySettings(); };
+  $('vibrate').onchange = e=>{ DZ.save.settings.vibrate = e.target.checked; DZ.persist(); };
+};
+
+DZ.loadSettingsUI = ()=>{
+  $('sens').value = DZ.save.settings.sens;
+  $('sensVal').textContent = DZ.save.settings.sens;
+  $('vol').value = DZ.save.settings.vol;
+  $('volVal').textContent = DZ.save.settings.vol;
+  $('quality').value = DZ.save.settings.quality;
+  $('vibrate').checked = DZ.save.settings.vibrate;
+};
+
+DZ.renderMissions = ()=>{
+  const list = $('missionList');
+  list.innerHTML = '';
+  DZ.MISSIONS.forEach((m,i)=>{
+    const unlocked = DZ.save.unlocked.includes(i);
+    const done = DZ.save.completed.includes(i);
+    const div = document.createElement('div');
+    div.className = 'panel';
+    div.style.cssText = 'text-align:left;cursor:' + (unlocked?'pointer':'not-allowed') + ';opacity:' + (unlocked?'1':'0.4') + ';padding:14px;border-color:' + (done?'#4dbb7a':'#c1272d');
+    div.innerHTML = `<div style="font-size:12px;letter-spacing:2px;color:${done?'#4dbb7a':'#c1272d'}">${done?'✓ COMPLETE':(unlocked?'AVAILABLE':'LOCKED')}</div>
+                     <div style="font-weight:700;margin:4px 0">${m.name}</div>
+                     <div style="font-size:12px;color:#888">${m.desc}</div>
+                     <div style="font-size:11px;color:#555;margin-top:4px">${m.target} enemies · ${m.area}</div>`;
+    if(unlocked) div.onclick = ()=>{ DZ.showScreen(null); DZ.startMission(i); };
+    list.appendChild(div);
+  });
+};
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+window.addEventListener('load', ()=>{
+  try {
+    DZ.init();
+  } catch(e){
+    console.error('[DEAD ZONE] Boot failed:', e);
+    alert('Boot error: ' + e.message + '\n\nCheck browser console (F12) for details.');
+  }
+});
+</script>
+</body>
+</html>
